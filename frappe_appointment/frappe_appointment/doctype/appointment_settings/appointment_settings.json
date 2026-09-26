@@ -6,6 +6,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "calendar_section",
+  "enable_google_calendar",
   "default_email_templates_section",
   "default_personal_email_template",
   "default_group_email_template",
@@ -24,6 +26,18 @@
   "zoom_access_token"
  ],
  "fields": [
+  {
+   "fieldname": "calendar_section",
+   "fieldtype": "Section Break",
+   "label": "Calendar"
+  },
+  {
+   "default": "1",
+   "description": "Uncheck when meetings use Namecheap CalDAV. The public booking page will not open Google Calendar.",
+   "fieldname": "enable_google_calendar",
+   "fieldtype": "Check",
+   "label": "Enable Google Calendar"
+  },
   {
    "fieldname": "default_email_templates_section",
    "fieldtype": "Section Break",

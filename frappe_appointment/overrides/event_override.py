@@ -92,11 +92,16 @@ class EventOverride(Event):
                 else:
                     self.description = f"Meet Link: {self.user_calendar.meeting_link}"
                 self.custom_meet_link = self.user_calendar.meeting_link
+            from frappe_appointment.integrations.calendar_backend import google_calendar_enabled, should_query_google
+
+            event_creator = self.user_calendar.get("google_calendar")
+            if not should_query_google(self.user_calendar.get("calendar_source"), google_calendar_enabled()):
+                event_creator = None
             self.appointment_group = frappe.get_doc(
                 {
                     "doctype": "Appointment Group",
                     "group_name": "Personal Meeting",
-                    "event_creator": self.user_calendar.get("google_calendar"),
+                    "event_creator": event_creator,
                     "event_organizer": self.user_calendar.get("user"),
                     "members": [{"user": self.user_calendar.get("name"), "is_mandatory": 1}],
                     "duration_for_event": self.appointment_slot_duration.duration,
@@ -290,8 +295,14 @@ class EventOverride(Event):
 
         members = self.appointment_group.members
 
-        # Namecheap CalDAV availabilities have no Google Calendar. The guest and
-        # the mailbox owner are already on event_participants.
+        # Guest has no permission on Google Calendar. CalDAV, or Google turned off
+        # in Appointment Settings, must not load that doctype.
+        from frappe_appointment.integrations.calendar_backend import google_calendar_enabled, should_query_google
+
+        user_calendar = getattr(self, "user_calendar", None)
+        calendar_source = user_calendar.get("calendar_source") if user_calendar else None
+        if not should_query_google(calendar_source, google_calendar_enabled()):
+            return
         if not self.appointment_group.event_creator:
             return
 
@@ -547,14 +558,23 @@ def _create_event_for_appointment_group(
         return frappe.throw(frappe._("No Member found"))
 
     availability_name = event_info.get("user_calendar")
-    use_caldav = False
+    calendar_source = None
     if availability_name:
-        use_caldav = (
-            frappe.db.get_value("User Appointment Availability", availability_name, "calendar_source")
-            == "Namecheap CalDAV"
+        calendar_source = frappe.db.get_value(
+            "User Appointment Availability", availability_name, "calendar_source"
         )
+    from frappe_appointment.integrations.calendar_backend import (
+        NAMECHEAP_CALDAV,
+        google_calendar_enabled,
+        should_query_google,
+    )
+
+    use_caldav = calendar_source == NAMECHEAP_CALDAV
+    use_google = should_query_google(calendar_source, google_calendar_enabled()) and bool(
+        appointment_group.event_creator
+    )
     account = None
-    if not use_caldav:
+    if use_google:
         _, account = get_google_calendar_object(appointment_group.event_creator)
 
     if reschedule:
@@ -638,9 +658,9 @@ def _create_event_for_appointment_group(
         "description": event_info.get("description"),
         "starts_on": starts_on,
         "ends_on": ends_on,
-        "sync_with_google_calendar": 0 if use_caldav else 1,
-        "google_calendar": None if use_caldav else account.name,
-        "google_calendar_id": None if use_caldav else account.google_calendar_id,
+        "sync_with_google_calendar": 1 if use_google else 0,
+        "google_calendar": account.name if use_google else None,
+        "google_calendar_id": account.google_calendar_id if use_google else None,
         "pulled_from_google_calendar": 0,
         "custom_sync_participants_google_calendars": 1,
         "event_participants": json.loads(event_participants),

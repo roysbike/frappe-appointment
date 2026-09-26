@@ -5,7 +5,7 @@
 2. Install the app on the site.
 
 ```bash
-bench get-app https://github.com/rtCamp/frappe-appointment
+bench get-app https://github.com/roysbike/frappe-appointment
 bench --site [site-name] install-app frappe_appointment
 ```
 

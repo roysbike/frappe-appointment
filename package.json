@@ -2,7 +2,7 @@
     "name": "frappe-appointment",
     "version": "1.0.0",
     "main": "index.js",
-    "repository": "git@github.com:rtCamp/frappe-appointment.git",
+    "repository": "git@github.com:roysbike/frappe-appointment.git",
     "author": "rtCamp",
     "license": "AGPLv3",
     "private": true,

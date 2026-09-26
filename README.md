@@ -21,7 +21,7 @@
 Run the following command to install the app.
 
 ```bash
-bench get-app git@github.com:rtCamp/frappe-appointment.git
+bench get-app git@github.com:roysbike/frappe-appointment.git
 bench --site [site-name] install-app frappe_appointment
 bench --site [site-name] migrate
 bench restart

@@ -49,6 +49,12 @@ class UserAppointmentAvailability(Document):
             calendar_url = check_connection(self)
             frappe.msgprint(frappe._("CalDAV connected: {0}").format(calendar_url), alert=True)
         else:
+            from frappe_appointment.integrations.calendar_backend import google_calendar_enabled
+
+            if not google_calendar_enabled():
+                frappe.throw(
+                    frappe._("Google Calendar is turned off in Appointment Settings. Choose Namecheap CalDAV.")
+                )
             calendar = frappe.get_doc("Google Calendar", self.google_calendar)
             if not calendar.custom_is_google_calendar_authorized:
                 frappe.throw(frappe._("Please authorize Google Calendar before creating appointment availability."))

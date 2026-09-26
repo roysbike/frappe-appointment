@@ -262,11 +262,19 @@ def book_time_slot(
     return response
 
 
+def _event_creator(user_availability):
+    from frappe_appointment.integrations.calendar_backend import google_calendar_enabled, should_query_google
+
+    if not should_query_google(user_availability.get("calendar_source"), google_calendar_enabled()):
+        return None
+    return user_availability.get("google_calendar")
+
+
 def create_dummy_appointment_group(duration, user_availability):
     appointment_group_obj = {
         "doctype": "Appointment Group",
         "group_name": "Personal Meeting",
-        "event_creator": user_availability.get("google_calendar"),
+        "event_creator": _event_creator(user_availability),
         "event_organizer": user_availability.get("user"),
         "members": [{"user": user_availability.get("name"), "is_mandatory": 1}],
         "duration_for_event": duration.duration,

@@ -88,6 +88,11 @@ def get_google_calendar_slots_member(
 
         return busy_events(member, date)
 
+    from frappe_appointment.integrations.calendar_backend import google_calendar_enabled
+
+    if not google_calendar_enabled():
+        return []
+
     google_calendar_id = frappe.get_value("User Appointment Availability", member, "google_calendar")
 
     if not google_calendar_id:
