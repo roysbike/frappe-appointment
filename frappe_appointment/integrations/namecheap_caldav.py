@@ -1,30 +1,15 @@
-# Namecheap Private Email calendar is CalDAV at dav.privateemail.com.
-# Apple Calendar on Mac and iPhone syncs the same account.
+# cPanel CalDAV for a mailbox. Namecheap shows it under Secure SSL/TLS URLs:
+# https://<domain>:2080/calendars/<mailbox>/calendar
+# Apple Calendar on Mac and iPhone syncs that same collection.
 
 import base64
 import re
 import uuid
 from datetime import datetime, timedelta
-from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 
 import frappe
 from frappe.utils.password import decrypt
-
-PROPFIND_PRINCIPAL = """<?xml version="1.0" encoding="utf-8"?>
-<d:propfind xmlns:d="DAV:"><d:prop><d:current-user-principal/></d:prop></d:propfind>
-"""
-PROPFIND_HOME = """<?xml version="1.0" encoding="utf-8"?>
-<d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-  <d:prop><c:calendar-home-set/></d:prop>
-</d:propfind>
-"""
-PROPFIND_CALENDARS = """<?xml version="1.0" encoding="utf-8"?>
-<d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-  <d:prop><d:resourcetype/><c:supported-calendar-component-set/></d:prop>
-</d:propfind>
-"""
-
 
 def busy_events(availability_name, day):
     """Busy blocks shaped like Google events so the existing slot filter can use them."""
@@ -85,7 +70,7 @@ def _credentials(availability):
     if not availability.caldav_username:
         frappe.throw(frappe._("Set the Namecheap mailbox on the availability."))
     password = _read_password(availability.name)
-    server = (availability.caldav_server or "https://dav.privateemail.com").rstrip("/")
+    server = (availability.caldav_server or "").strip().rstrip("/")
     return availability.caldav_username, password, server
 
 
@@ -102,70 +87,20 @@ def _read_password(name):
 
 def _calendar_url(availability_name, username, password, server):
     cache = frappe.cache()
-    key = f"namecheap-caldav:{availability_name}"
+    key = f"namecheap-caldav:{availability_name}:{server}"
     cached = cache.get_value(key)
     if cached:
         return cached
-    principal = _href(server + "/", username, password, PROPFIND_PRINCIPAL, "current-user-principal")
-    home = _href(_absolute(server, principal), username, password, PROPFIND_HOME, "calendar-home-set")
-    home_url = _absolute(server, home)
-    status, payload = _request(
-        home_url,
-        "PROPFIND",
-        username,
-        password,
-        PROPFIND_CALENDARS.encode(),
-        {"Depth": "1", "Content-Type": "application/xml; charset=utf-8"},
-    )
-    if status >= 400:
-        frappe.throw(frappe._("Could not list Namecheap calendars for {0} ({1}).").format(username, status))
-    calendar = _first_event_calendar(payload, home_url)
+    # cPanel default calendar. Example: https://mybooks.ae:2080/calendars/kgo@mybooks.ae/calendar
+    if "/calendars/" in server:
+        calendar = server if server.endswith("/") else server + "/"
+    else:
+        if "@" not in username:
+            frappe.throw(frappe._("Mailbox must be a full address, for example kgo@mybooks.ae."))
+        host = server or f"https://{username.split('@', 1)[1]}:2080"
+        calendar = f"{host}/calendars/{username}/calendar/"
     cache.set_value(key, calendar, expires_in_sec=3600)
     return calendar
-
-
-def _href(url, username, password, body, tag):
-    status, payload = _request(
-        url,
-        "PROPFIND",
-        username,
-        password,
-        body.encode(),
-        {"Depth": "0", "Content-Type": "application/xml; charset=utf-8"},
-    )
-    if status >= 400:
-        frappe.throw(frappe._("Namecheap CalDAV discovery failed ({0}).").format(status))
-    root = __import__("xml.etree.ElementTree", fromlist=["ElementTree"]).fromstring(payload)
-    node = None
-    for element in root.iter():
-        if element.tag.endswith("}" + tag) or element.tag == tag:
-            node = element
-            break
-    if node is None:
-        frappe.throw(frappe._("Namecheap CalDAV did not return {0}.").format(tag))
-    for element in node.iter():
-        if (element.tag.endswith("}href") or element.tag == "href") and element.text:
-            return element.text.strip()
-    frappe.throw(frappe._("Namecheap CalDAV did not return a href for {0}.").format(tag))
-
-
-def _first_event_calendar(payload, home_url):
-    root = __import__("xml.etree.ElementTree", fromlist=["ElementTree"]).fromstring(payload)
-    for response in root.iter():
-        if not (response.tag.endswith("}response") or response.tag == "response"):
-            continue
-        href = None
-        is_calendar = False
-        for element in response.iter():
-            if (element.tag.endswith("}href") or element.tag == "href") and href is None and element.text:
-                href = element.text.strip()
-            if element.tag.endswith("}calendar") or element.tag == "calendar":
-                is_calendar = True
-        if href and is_calendar:
-            url = _absolute(home_url, href)
-            if url.rstrip("/") != home_url.rstrip("/"):
-                return url if url.endswith("/") else url + "/"
-    return home_url if home_url.endswith("/") else home_url + "/"
 
 
 def _request(url, method, username, password, body=None, headers=None):
@@ -209,12 +144,6 @@ def _day_bounds(day):
         day = datetime.strptime(day[:10], "%Y-%m-%d")
     start = datetime(day.year, day.month, day.day)
     return start, start + timedelta(days=1)
-
-
-def _absolute(base, href):
-    if href.startswith("http://") or href.startswith("https://"):
-        return href
-    return urljoin(base if base.endswith("/") else base + "/", href)
 
 
 def _vevent(uid, summary, starts_on, ends_on, description):

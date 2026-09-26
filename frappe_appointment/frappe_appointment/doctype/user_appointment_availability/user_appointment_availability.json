@@ -119,10 +119,8 @@
    "fieldname": "caldav_server",
    "fieldtype": "Data",
    "label": "CalDAV Server",
-   "default": "https://dav.privateemail.com",
    "depends_on": "eval:doc.calendar_source=='Namecheap CalDAV'",
-   "mandatory_depends_on": "eval:doc.calendar_source=='Namecheap CalDAV'",
-   "description": "Namecheap Private Email calendar. Apple Calendar uses the same server."
+   "description": "Leave empty for the cPanel calendar https://<domain>:2080/calendars/<mailbox>/calendar. Apple Calendar uses the same collection."
   },
   {
    "fieldname": "caldav_username",
@@ -138,7 +136,7 @@
    "label": "Application Password",
    "depends_on": "eval:doc.calendar_source=='Namecheap CalDAV'",
    "mandatory_depends_on": "eval:doc.calendar_source=='Namecheap CalDAV'",
-   "description": "Namecheap Private Email application password, not the webmail password."
+   "description": "Password of this mailbox. cPanel CalDAV uses it for https://<domain>:2080."
   }
  ],
  "index_web_pages_for_search": 1,

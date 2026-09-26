@@ -42,8 +42,8 @@ class UserAppointmentAvailability(Document):
         if (self.calendar_source or "Google Calendar") == "Namecheap CalDAV":
             if not self.caldav_username or not self.get_password("caldav_app_password"):
                 frappe.throw(frappe._("Set the Namecheap mailbox and application password."))
-            if not self.caldav_server:
-                self.caldav_server = "https://dav.privateemail.com"
+            if self.caldav_server:
+                self.caldav_server = self.caldav_server.strip().rstrip("/")
         else:
             calendar = frappe.get_doc("Google Calendar", self.google_calendar)
             if not calendar.custom_is_google_calendar_authorized:
