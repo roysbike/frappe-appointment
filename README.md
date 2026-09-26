@@ -10,7 +10,16 @@
 <img src="frappe_appointment/public/featured-image.png" width="1050" alt="Frappe Appointment">
 </div>
 
-## What's new in this fork
+## Already in the app before this fork
+
+1.2.0 starts from [rtCamp Frappe Appointment 1.1.5](https://github.com/rtCamp/frappe-appointment) for Frappe v16. That version already had:
+
+- **Personal and group booking.** A personal link `/schedule/in/<slug>` and a group page, with duration, weekly hours, notice period, booking window, buffer, and a daily booking limit.
+- **Calendars and meeting links.** Google Calendar busy time, Zoom, Google Meet, and a custom meeting link.
+- **ERPNext.** Leave and holidays close slots. A booking creates an Event. Confirmation and organiser emails use Email Templates, with a reschedule link.
+- **Guest list.** The booker can add other email addresses to the meeting.
+
+## What's new in 1.2.0
 
 Scheduling can use a Namecheap/cPanel calendar instead of Google.
 
@@ -23,6 +32,8 @@ Scheduling can use a Namecheap/cPanel calendar instead of Google.
 - **Phone.** The contact form has an optional Phone field. The number is stored in the Event description as `Phone: +971 ...`, next to the meet link. No extra field is required.
 - **One booking owns that time.** An open meeting on that calendar removes the slot. Cancelling the meeting frees it. Limit Booking Frequency `-1` means no daily cap. It does not allow a second booking of the same time.
 - **Email timezone.** The confirmation uses the timezone selected on the booking page, for example `Tuesday, 29 September 2026 at 02:00 pm (Dubai)`.
+- **Contact form.** Name and last name are separate. The phone field formats a UAE number while it is typed. The browser can remember the fields from the last visit.
+- **Cookie choice.** Name, email, and phone are stored in a cookie only after Allow. No thanks leaves them out. The choice can be changed from the Cookies link. This follows UAE Federal Decree-Law No. 45 of 2021.
 
 ## Key Features
 
