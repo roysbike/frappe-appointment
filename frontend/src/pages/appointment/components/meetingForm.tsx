@@ -31,10 +31,12 @@ import {
   getTimeZoneOffsetFromTimeZoneString,
   parseFrappeErrorMsg,
 } from "@/lib/utils";
+import { formatPhone, phoneGuide, readContactCookie, writeContactCookie } from "@/lib/booking-memory";
 import Spinner from "@/components/spinner";
 
 const contactFormSchema = z.object({
-  fullName: z.string().min(2, "Name must be at least 2 characters"),
+  firstName: z.string().trim().min(2, "Name must be at least 2 characters"),
+  lastName: z.string().trim().min(2, "Last name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
   phone: z.string().trim().refine((value) => {
     if (!value) return true;
@@ -68,16 +70,23 @@ const MeetingForm = ({
   const [searchParams] = useSearchParams();
 
   const { selectedDate, selectedSlot, timeZone } = useAppContext();
+  const [savedContact] = useState(() => readContactCookie());
 
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
-      fullName: "",
-      email: "",
-      phone: "",
+      firstName: savedContact?.firstName ?? "",
+      lastName: savedContact?.lastName ?? "",
+      email: savedContact?.email ?? "",
+      phone: savedContact?.phone ?? "",
       guests: [],
     },
   });
+
+  const rememberedClass = (field: "firstName" | "lastName" | "email" | "phone") =>
+    savedContact && !form.formState.dirtyFields[field]
+      ? "bg-blue-50 dark:bg-blue-950/40"
+      : "";
 
   const handleGuestKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
@@ -121,15 +130,21 @@ const MeetingForm = ({
       user_timezone: timeZone,
       start_time: selectedSlot.start_time,
       end_time: selectedSlot.end_time,
-      user_name: data.fullName,
+      user_name: `${data.firstName.trim()} ${data.lastName.trim()}`,
       user_email: data.email,
       user_phone: data.phone,
       other_participants: data.guests.join(", "),
     };
 
     bookMeeting(meetingData)
-      .then((data) => {
-        onSuccess(data);
+      .then((response) => {
+        writeContactCookie({
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          email: data.email.trim(),
+          phone: data.phone,
+        });
+        onSuccess(response);
       })
       .catch((err) => {
         const error = parseFrappeErrorMsg(err);
@@ -173,39 +188,80 @@ const MeetingForm = ({
               </Typography>
             </div>
 
-            <FormField
-              control={form.control}
-              name="fullName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel
-                    className={`${
-                      form.formState.errors.fullName ? "text-red-500" : ""
-                    }`}
-                  >
-                    Full Name{" "}
-                    <span className="text-red-500 dark:text-red-600">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      disabled={loading}
-                      className={`active:ring-blue-400 focus-visible:ring-blue-400 ${
-                        form.formState.errors.fullName
-                          ? "active:ring-red-500 focus-visible:ring-red-500"
-                          : ""
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel
+                      className={`${
+                        form.formState.errors.firstName ? "text-red-500" : ""
                       }`}
-                      placeholder="John Doe"
-                      {...field}
+                    >
+                      Name{" "}
+                      <span className="text-red-500 dark:text-red-600">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        disabled={loading}
+                        autoComplete="given-name"
+                        className={`active:ring-blue-400 focus-visible:ring-blue-400 ${rememberedClass(
+                          "firstName"
+                        )} ${
+                          form.formState.errors.firstName
+                            ? "active:ring-red-500 focus-visible:ring-red-500"
+                            : ""
+                        }`}
+                        placeholder="Ivan"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage
+                      className={`${
+                        form.formState.errors.firstName ? "text-red-500" : ""
+                      }`}
                     />
-                  </FormControl>
-                  <FormMessage
-                    className={`${
-                      form.formState.errors.fullName ? "text-red-500" : ""
-                    }`}
-                  />
-                </FormItem>
-              )}
-            />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel
+                      className={`${
+                        form.formState.errors.lastName ? "text-red-500" : ""
+                      }`}
+                    >
+                      Last name{" "}
+                      <span className="text-red-500 dark:text-red-600">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        disabled={loading}
+                        autoComplete="family-name"
+                        className={`active:ring-blue-400 focus-visible:ring-blue-400 ${rememberedClass(
+                          "lastName"
+                        )} ${
+                          form.formState.errors.lastName
+                            ? "active:ring-red-500 focus-visible:ring-red-500"
+                            : ""
+                        }`}
+                        placeholder="Dorn"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage
+                      className={`${
+                        form.formState.errors.lastName ? "text-red-500" : ""
+                      }`}
+                    />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -223,7 +279,9 @@ const MeetingForm = ({
                   <FormControl>
                     <Input
                       disabled={loading}
-                      className={`active:ring-blue-400 focus-visible:ring-blue-400 ${
+                      className={`active:ring-blue-400 focus-visible:ring-blue-400 ${rememberedClass(
+                        "email"
+                      )} ${
                         form.formState.errors.email
                           ? "active:ring-red-500 focus-visible:ring-red-500"
                           : ""
@@ -257,16 +315,21 @@ const MeetingForm = ({
                     <Input
                       disabled={loading}
                       type="tel"
+                      inputMode="tel"
                       autoComplete="tel"
-                      className={`active:ring-blue-400 focus-visible:ring-blue-400 ${
+                      className={`active:ring-blue-400 focus-visible:ring-blue-400 ${rememberedClass(
+                        "phone"
+                      )} ${
                         form.formState.errors.phone
                           ? "active:ring-red-500 focus-visible:ring-red-500"
                           : ""
                       }`}
-                      placeholder="+971 50 123 4567"
+                      placeholder="+971 52 518 6181"
                       {...field}
+                      onChange={(event) => field.onChange(formatPhone(event.target.value))}
                     />
                   </FormControl>
+                  <PhoneGuide value={field.value} />
                   <FormMessage
                     className={`${
                       form.formState.errors.phone ? "text-red-500" : ""
@@ -341,6 +404,29 @@ const MeetingForm = ({
         </form>
       </Form>
     </motion.div>
+  );
+};
+
+const PhoneGuide = ({ value }: { value: string }) => {
+  const marks = phoneGuide(value);
+  if (!marks) return null;
+  return (
+    <p className="text-sm tracking-wide" aria-hidden="true">
+      {marks.map((mark, index) => (
+        <span
+          key={`${mark.state}-${index}`}
+          className={
+            mark.state === "filled"
+              ? "font-medium text-blue-600 dark:text-blue-400"
+              : mark.state === "empty"
+                ? "text-zinc-300 dark:text-zinc-600"
+                : "text-muted-foreground"
+          }
+        >
+          {mark.char}
+        </span>
+      ))}
+    </p>
   );
 };
 
