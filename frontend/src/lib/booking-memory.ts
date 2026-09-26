@@ -1,5 +1,12 @@
 const COOKIE = "fa_contact";
+const CHOICE_COOKIE = "fa_cookie_choice";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 180;
+const CHOICE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+
+export const COOKIE_CHOICE_EVENT = "fa-cookie-choice";
+export const COOKIE_SETTINGS_EVENT = "fa-cookie-settings";
+
+export type CookieChoice = "allow" | "deny";
 
 export type SavedContact = {
   firstName: string;
@@ -45,12 +52,39 @@ export function phoneGuide(value: string): PhoneMark[] | null {
   return marks;
 }
 
-export function readContactCookie(): SavedContact | null {
+function readCookieValue(name: string): string | null {
   if (typeof document === "undefined") return null;
-  const pair = document.cookie.split("; ").find((item) => item.startsWith(`${COOKIE}=`));
+  const pair = document.cookie
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(`${name}=`));
   if (!pair) return null;
+  return decodeURIComponent(pair.slice(name.length + 1));
+}
+
+export function readCookieChoice(): CookieChoice | null {
+  const value = readCookieValue(CHOICE_COOKIE);
+  return value === "allow" || value === "deny" ? value : null;
+}
+
+export function clearContactCookie() {
+  if (typeof document === "undefined") return;
+  document.cookie = `${COOKIE}=; Path=/schedule; Max-Age=0; SameSite=Lax; Secure`;
+}
+
+export function writeCookieChoice(choice: CookieChoice) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${CHOICE_COOKIE}=${choice}; Path=/schedule; Max-Age=${CHOICE_MAX_AGE_SECONDS}; SameSite=Lax; Secure`;
+  if (choice === "deny") clearContactCookie();
+  window.dispatchEvent(new CustomEvent(COOKIE_CHOICE_EVENT, { detail: choice }));
+}
+
+export function readContactCookie(): SavedContact | null {
+  if (readCookieChoice() !== "allow") return null;
+  const raw = readCookieValue(COOKIE);
+  if (!raw) return null;
   try {
-    const parsed = JSON.parse(decodeURIComponent(pair.slice(COOKIE.length + 1))) as Partial<SavedContact>;
+    const parsed = JSON.parse(raw) as Partial<SavedContact>;
     if (!parsed || typeof parsed !== "object") return null;
     return {
       firstName: String(parsed.firstName || ""),
@@ -64,7 +98,7 @@ export function readContactCookie(): SavedContact | null {
 }
 
 export function writeContactCookie(contact: SavedContact) {
-  if (typeof document === "undefined") return;
+  if (typeof document === "undefined" || readCookieChoice() !== "allow") return;
   const value = encodeURIComponent(JSON.stringify(contact));
   document.cookie = `${COOKIE}=${value}; Path=/schedule; Max-Age=${MAX_AGE_SECONDS}; SameSite=Lax; Secure`;
 }

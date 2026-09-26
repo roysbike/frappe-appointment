@@ -1,7 +1,7 @@
 /**
  * External dependencies.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import z from "zod";
@@ -31,7 +31,13 @@ import {
   getTimeZoneOffsetFromTimeZoneString,
   parseFrappeErrorMsg,
 } from "@/lib/utils";
-import { formatPhone, phoneGuide, readContactCookie, writeContactCookie } from "@/lib/booking-memory";
+import {
+  COOKIE_CHOICE_EVENT,
+  formatPhone,
+  phoneGuide,
+  readContactCookie,
+  writeContactCookie,
+} from "@/lib/booking-memory";
 import Spinner from "@/components/spinner";
 
 const contactFormSchema = z.object({
@@ -70,7 +76,7 @@ const MeetingForm = ({
   const [searchParams] = useSearchParams();
 
   const { selectedDate, selectedSlot, timeZone } = useAppContext();
-  const [savedContact] = useState(() => readContactCookie());
+  const [savedContact, setSavedContact] = useState(() => readContactCookie());
 
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
@@ -82,6 +88,20 @@ const MeetingForm = ({
       guests: [],
     },
   });
+
+  useEffect(() => {
+    const applySavedContact = () => {
+      const saved = readContactCookie();
+      setSavedContact(saved);
+      const fields = ["firstName", "lastName", "email", "phone"] as const;
+      fields.forEach((name) => {
+        if (form.formState.dirtyFields[name]) return;
+        form.setValue(name, saved?.[name] ?? "");
+      });
+    };
+    window.addEventListener(COOKIE_CHOICE_EVENT, applySavedContact);
+    return () => window.removeEventListener(COOKIE_CHOICE_EVENT, applySavedContact);
+  }, [form]);
 
   const rememberedClass = (field: "firstName" | "lastName" | "email" | "phone") =>
     savedContact && !form.formState.dirtyFields[field]
@@ -174,6 +194,9 @@ const MeetingForm = ({
     >
       <Form {...form}>
         <form
+          name="booking-contact"
+          method="post"
+          autoComplete="on"
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6 h-full flex justify-between flex-col"
         >
@@ -205,7 +228,7 @@ const MeetingForm = ({
                     <FormControl>
                       <Input
                         disabled={loading}
-                        autoComplete="given-name"
+                        autoCapitalize="words"
                         className={`active:ring-blue-400 focus-visible:ring-blue-400 ${rememberedClass(
                           "firstName"
                         )} ${
@@ -213,8 +236,10 @@ const MeetingForm = ({
                             ? "active:ring-red-500 focus-visible:ring-red-500"
                             : ""
                         }`}
-                        placeholder="Ivan"
+                        placeholder="Alex"
                         {...field}
+                        name="given-name"
+                        autoComplete="section-booking given-name"
                       />
                     </FormControl>
                     <FormMessage
@@ -241,7 +266,7 @@ const MeetingForm = ({
                     <FormControl>
                       <Input
                         disabled={loading}
-                        autoComplete="family-name"
+                        autoCapitalize="words"
                         className={`active:ring-blue-400 focus-visible:ring-blue-400 ${rememberedClass(
                           "lastName"
                         )} ${
@@ -249,8 +274,10 @@ const MeetingForm = ({
                             ? "active:ring-red-500 focus-visible:ring-red-500"
                             : ""
                         }`}
-                        placeholder="Dorn"
+                        placeholder="Taylor"
                         {...field}
+                        name="family-name"
+                        autoComplete="section-booking family-name"
                       />
                     </FormControl>
                     <FormMessage
@@ -279,6 +306,10 @@ const MeetingForm = ({
                   <FormControl>
                     <Input
                       disabled={loading}
+                      type="email"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
                       className={`active:ring-blue-400 focus-visible:ring-blue-400 ${rememberedClass(
                         "email"
                       )} ${
@@ -286,8 +317,10 @@ const MeetingForm = ({
                           ? "active:ring-red-500 focus-visible:ring-red-500"
                           : ""
                       }`}
-                      placeholder="john.Doe@gmail.com"
+                      placeholder="alex.taylor@example.com"
                       {...field}
+                      name="email"
+                      autoComplete="section-booking email"
                     />
                   </FormControl>
                   <FormMessage
@@ -316,7 +349,6 @@ const MeetingForm = ({
                       disabled={loading}
                       type="tel"
                       inputMode="tel"
-                      autoComplete="tel"
                       className={`active:ring-blue-400 focus-visible:ring-blue-400 ${rememberedClass(
                         "phone"
                       )} ${
@@ -324,8 +356,10 @@ const MeetingForm = ({
                           ? "active:ring-red-500 focus-visible:ring-red-500"
                           : ""
                       }`}
-                      placeholder="+971 52 518 6181"
+                      placeholder="+971 50 123 4567"
                       {...field}
+                      name="tel"
+                      autoComplete="section-booking tel"
                       onChange={(event) => field.onChange(formatPhone(event.target.value))}
                     />
                   </FormControl>
@@ -353,7 +387,7 @@ const MeetingForm = ({
               {isGuestsOpen && (
                 <div className="space-y-2">
                   <Input
-                    placeholder="janedoe@hotmail.com, bob@gmail.com, etc."
+                    placeholder="guest@example.com"
                     value={guestInput}
                     className="active:ring-blue-400 focus-visible:ring-blue-400"
                     onChange={(e) => setGuestInput(e.target.value)}

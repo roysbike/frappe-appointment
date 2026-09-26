@@ -1,6 +1,6 @@
 import Typography from "../typography";
 
-const PoweredBy = () => {
+const PoweredBy = ({ onCookieSettings }: { onCookieSettings?: () => void }) => {
   return (
     <>
       <div className="flexitems-center w-full justify-center shrink-0">
@@ -19,6 +19,15 @@ const PoweredBy = () => {
               Frappe Appointment
             </a>
           </Typography>
+          {onCookieSettings && (
+            <button
+              type="button"
+              onClick={onCookieSettings}
+              className="font-semibold hover:underline text-blue-400"
+            >
+              Cookies
+            </button>
+          )}
         </Typography>
       </div>
     </>

@@ -17,6 +17,8 @@ import { useAppContext } from "@/context/app";
 import { Skeleton } from "@/components/skeleton";
 import { getLocalTimezone } from "@/lib/utils";
 import PoweredBy from "@/components/powered-by";
+import CookieNotice from "@/components/cookie-notice";
+import { COOKIE_SETTINGS_EVENT } from "@/lib/booking-memory";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
 import Typography from "@/components/typography";
 import MetaTags from "@/components/meta-tags";
@@ -188,7 +190,10 @@ const Appointment = () => {
       ) : (
         <Booking type={type} banner={userInfo.banner_image} />
       )}
-      <PoweredBy />
+      <CookieNotice />
+      <PoweredBy
+        onCookieSettings={() => window.dispatchEvent(new Event(COOKIE_SETTINGS_EVENT))}
+      />
     </>
   );
 };
