@@ -29,21 +29,21 @@ def get_meeting_windows(slug: str):
     if not user:
         return {"error": "No user found"}, 404
 
-    user = frappe.get_doc("User", user)
-
-    full_name = user.get("full_name")
-    profile_pic = user.get("user_image")
-    banner_image = user.get("banner_image")
+    # Guest has no permission on User. Only the public profile fields are read.
+    full_name, profile_pic, banner_image = frappe.db.get_value(
+        "User", user, ["full_name", "user_image", "banner_image"]
+    ) or (None, None, None)
     position = None
     company = None
 
     installed_apps = frappe.get_installed_apps()
     if "erpnext" in installed_apps:
-        employee = frappe.get_all("Employee", filters={"user_id": user.name}, fields=["*"])
+        employee = frappe.db.get_value(
+            "Employee", {"user_id": user}, ["designation", "company"], as_dict=True
+        )
         if employee:
-            employee = employee[0]
-            position = employee.get("designation")
-            company = employee.get("company")
+            position = employee.designation
+            company = employee.company
 
     meeting_provider = user_availability.get("meeting_provider")
 
@@ -231,7 +231,7 @@ def book_time_slot(
             args["custom_doctype_link_with_event"] = json.dumps(original_link)
 
     if not args.get("Subject", None):
-        name = frappe.get_value("User", user_availability.get("user"), "full_name")
+        name = frappe.db.get_value("User", user_availability.get("user"), "full_name")
 
         duration_str = duration_to_string(duration.duration)
 
