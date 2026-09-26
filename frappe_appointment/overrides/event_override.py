@@ -290,6 +290,11 @@ class EventOverride(Event):
 
         members = self.appointment_group.members
 
+        # Namecheap CalDAV availabilities have no Google Calendar. The guest and
+        # the mailbox owner are already on event_participants.
+        if not self.appointment_group.event_creator:
+            return
+
         _, account = get_google_calendar_object(self.appointment_group.event_creator)
 
         idx = len(self.event_participants) + 1
