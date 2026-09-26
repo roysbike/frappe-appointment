@@ -174,6 +174,7 @@ const GroupAppointment = () => {
       user_timezone_offset: String(
         getTimeZoneOffsetFromTimeZoneString(state.timeZone)
       ),
+      user_timezone: state.timeZone,
       start_time: state.selectedSlot!.start_time,
       end_time: state.selectedSlot!.end_time,
     };

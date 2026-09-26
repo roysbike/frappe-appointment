@@ -58,6 +58,18 @@ class TestBookingPhone(unittest.TestCase):
         self.assertEqual(phone, "+971 50 123 4567")
         self.assertEqual(_phone.description_with_phone("", phone), "Phone: +971 50 123 4567")
 
+    def test_dubai_selection_is_labeled_dubai_not_ist(self):
+        text = _phone.format_appointment_when("2026-09-29 14:00:00", "Asia/Dubai", "Asia/Dubai")
+        self.assertEqual(text, "Tuesday, 29 September 2026 at 02:00 pm (Dubai)")
+
+    def test_kolkata_selection_shifts_the_clock(self):
+        text = _phone.format_appointment_when("2026-09-29 14:00:00", "Asia/Dubai", "Asia/Kolkata")
+        self.assertEqual(text, "Tuesday, 29 September 2026 at 03:30 pm (Kolkata)")
+
+    def test_unknown_timezone_uses_the_site_zone(self):
+        text = _phone.format_appointment_when("2026-09-29 14:00:00", "Asia/Dubai", "Not/AZone")
+        self.assertIn("(Dubai)", text)
+
     def test_short_or_text_phone_is_rejected(self):
         with self.assertRaises(ValueError):
             _phone.normalize_booking_phone("123")

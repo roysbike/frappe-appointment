@@ -58,10 +58,8 @@ class EventOverride(Event):
             elif self.appointment_group.meet_provider == "Google Meet":
                 self.add_video_conferencing = 1
             elif self.appointment_group.meet_provider == "Custom" and self.appointment_group.meet_link:
-                if self.description:
-                    self.description = f"\nMeet Link: {self.appointment_group.meet_link}"
-                else:
-                    self.description = f"Meet Link: {self.appointment_group.meet_link}"
+                link = f"Meet Link: {self.appointment_group.meet_link}"
+                self.description = f"{self.description}\n{link}" if self.description else link
                 self.custom_meet_link = self.appointment_group.meet_link
             self.update_attendees_for_appointment_group()
         elif self.custom_user_calendar:
@@ -87,10 +85,8 @@ class EventOverride(Event):
             elif self.user_calendar.meeting_provider == "Google Meet":
                 self.add_video_conferencing = 1
             elif self.user_calendar.meeting_provider == "Custom" and self.user_calendar.meeting_link:
-                if self.description:
-                    self.description = f"\nMeet Link: {self.user_calendar.meeting_link}"
-                else:
-                    self.description = f"Meet Link: {self.user_calendar.meeting_link}"
+                link = f"Meet Link: {self.user_calendar.meeting_link}"
+                self.description = f"{self.description}\n{link}" if self.description else link
                 self.custom_meet_link = self.user_calendar.meeting_link
             from frappe_appointment.integrations.calendar_backend import google_calendar_enabled, should_query_google
 
@@ -434,11 +430,17 @@ def send_meet_email(doc, appointment_group, user_calendar, metadata, ics_event_d
             ag_dict = appointment_group.as_dict() if appointment_group else user_calendar.as_dict()
             ag_dict["meet_link"] = doc.custom_meet_link  # For backward compatibility
 
+            from frappe_appointment.helpers.booking_contact import format_appointment_when
+
+            guest_timezone = (metadata or {}).get("user_timezone")
             args = dict(
                 appointment_group=ag_dict,
                 meet_link=doc.custom_meet_link,
                 event=doc.as_dict(),
                 metadata=metadata,
+                appointment_when=format_appointment_when(
+                    doc.starts_on, frappe.utils.get_system_timezone(), guest_timezone
+                ),
             )
 
             if organisers:

@@ -118,6 +118,7 @@ const MeetingForm = ({
       user_timezone_offset: String(
         getTimeZoneOffsetFromTimeZoneString(timeZone)
       ),
+      user_timezone: timeZone,
       start_time: selectedSlot.start_time,
       end_time: selectedSlot.end_time,
       user_name: data.fullName,
