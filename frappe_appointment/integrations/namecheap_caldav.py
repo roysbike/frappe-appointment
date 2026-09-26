@@ -46,6 +46,33 @@ def busy_events(availability_name, day):
     return events
 
 
+def check_connection(availability):
+    """PROPFIND the cPanel calendar. Used when the availability is saved."""
+    username = availability.caldav_username
+    password = availability.get_password("caldav_app_password")
+    server = (availability.caldav_server or "").strip().rstrip("/")
+    frappe.cache().delete_value(f"namecheap-caldav:{availability.name}:{server}")
+    calendar_url = _calendar_url(availability.name, username, password, server)
+    status, _payload = _request(
+        calendar_url,
+        "PROPFIND",
+        username,
+        password,
+        b"""<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:"><D:prop><D:displayname/></D:prop></D:propfind>""",
+        {"Depth": "0", "Content-Type": "application/xml; charset=utf-8"},
+    )
+    if status in (200, 207):
+        return calendar_url
+    if status in (401, 403):
+        frappe.throw(
+            frappe._("CalDAV login failed for {0} at {1} ({2}).").format(username, calendar_url, status)
+        )
+    frappe.throw(
+        frappe._("CalDAV calendar was not found for {0} at {1} ({2}).").format(username, calendar_url, status)
+    )
+
+
 def create_event(availability_name, uid, summary, starts_on, ends_on, description=""):
     availability = frappe.get_doc("User Appointment Availability", availability_name)
     username, password, server = _credentials(availability)
