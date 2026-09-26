@@ -502,6 +502,7 @@ const GroupAppointment = () => {
           meetLink={state.bookingResponse.meet_link}
           rescheduleLink={state.bookingResponse.reschedule_url}
           calendarString={state.bookingResponse.google_calendar_event_url}
+          title="Appointment"
           disableClose={
             state.meetingData.booked_slot &&
             Object.keys(state.meetingData.booked_slot).length > 0

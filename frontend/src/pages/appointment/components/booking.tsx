@@ -585,6 +585,7 @@ const Booking = ({ type, banner }: BookingProp) => {
           meetLink={state.bookingResponse.meet_link}
           rescheduleLink={state.bookingResponse.reschedule_url}
           calendarString={state.bookingResponse.google_calendar_event_url}
+          title={userInfo.name ? `Appointment with ${userInfo.name}` : "Appointment"}
           disableClose={false}
         />
       )}

@@ -666,6 +666,7 @@ def _create_event_for_appointment_group(
         "event_participants": json.loads(event_participants),
         "custom_doctype_link_with_event": json.loads(event_info.get("custom_doctype_link_with_event", "[]")),
         "send_reminder": 0,
+        "event_category": "Meeting",
         "event_type": "Private",
         "custom_appointment_group": appointment_group.name,
         "event_info": event_info,

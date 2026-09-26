@@ -174,10 +174,14 @@ def _day_bounds(day):
 
 
 def _vevent(uid, summary, starts_on, ends_on, description):
+    from frappe.utils.data import get_system_timezone
+
+    from frappe_appointment.integrations.calendar_backend import format_system_time_as_utc
+
+    zone = get_system_timezone()
+
     def _fmt(value):
-        if isinstance(value, str):
-            value = datetime.strptime(value[:19], "%Y-%m-%d %H:%M:%S")
-        return value.strftime("%Y%m%dT%H%M%SZ")
+        return format_system_time_as_utc(value, zone)
 
     safe_summary = (summary or "Appointment").replace("\n", " ")
     safe_description = (description or "").replace("\n", "\\n")

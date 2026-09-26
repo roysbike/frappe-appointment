@@ -26,6 +26,7 @@ import { Button } from "@/components/button";
 import { slotType } from "@/context/app";
 import Typography from "@/components/typography";
 import { cn } from "@/lib/utils";
+import { buildCalendarLinks } from "@/lib/calendar-links";
 
 interface SuccessAlertProps {
   open: boolean;
@@ -35,6 +36,7 @@ interface SuccessAlertProps {
   meetLink: string;
   rescheduleLink: string;
   calendarString: string;
+  title?: string;
   onClose?: VoidFunction;
   disableClose: boolean;
 }
@@ -47,6 +49,7 @@ const SuccessAlert = ({
   meetLink,
   rescheduleLink,
   calendarString,
+  title,
   onClose,
   disableClose,
 }: SuccessAlertProps) => {
@@ -56,6 +59,25 @@ const SuccessAlert = ({
     navigator.clipboard.writeText(calendarString);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const eventTitle = title || "Appointment";
+  const links = buildCalendarLinks({
+    title: eventTitle,
+    start: new Date(selectedSlot.start_time),
+    end: new Date(selectedSlot.end_time || selectedSlot.start_time),
+    details: meetLink || "",
+    location: meetLink || "",
+  });
+
+  const downloadAppleCalendar = () => {
+    const file = new Blob([links.ics], { type: "text/calendar" });
+    const url = URL.createObjectURL(file);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "appointment.ics";
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -118,6 +140,30 @@ const SuccessAlert = ({
                 <SquareArrowOutUpRight className="text-blue-500 transition-colors cursor-pointer h-4 w-4 " />
               </a>
             )}
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Add to your calendar</p>
+          <div className="flex flex-wrap gap-2">
+            <a href={links.google} target="_blank" rel="noopener noreferrer">
+              <Button variant="ghost" size="sm" className="border border-blue-400 text-blue-500 rounded-full">
+                Google
+              </Button>
+            </a>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="border border-blue-400 text-blue-500 rounded-full"
+              onClick={downloadAppleCalendar}
+            >
+              Apple
+            </Button>
+            <a href={links.microsoft} target="_blank" rel="noopener noreferrer">
+              <Button variant="ghost" size="sm" className="border border-blue-400 text-blue-500 rounded-full">
+                Microsoft
+              </Button>
+            </a>
           </div>
         </div>
 

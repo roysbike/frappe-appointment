@@ -1,7 +1,19 @@
 """Choose Google Calendar or Namecheap CalDAV without loading either document."""
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 NAMECHEAP_CALDAV = "Namecheap CalDAV"
 GOOGLE_CALENDAR = "Google Calendar"
+
+
+def format_system_time_as_utc(value, system_timezone):
+    """ERPNext stores the slot in the site timezone. CalDAV Z means UTC."""
+    if isinstance(value, str):
+        value = datetime.strptime(value[:19], "%Y-%m-%d %H:%M:%S")
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=ZoneInfo(system_timezone))
+    return value.astimezone(ZoneInfo("UTC")).strftime("%Y%m%dT%H%M%SZ")
 
 
 def should_query_google(calendar_source, google_enabled):
