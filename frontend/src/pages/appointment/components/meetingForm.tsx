@@ -36,6 +36,11 @@ import Spinner from "@/components/spinner";
 const contactFormSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
+  phone: z.string().trim().refine((value) => {
+    if (!value) return true;
+    const digits = value.replace(/\D/g, "");
+    return /^\+?[\d\s()-]+$/.test(value) && digits.length >= 7 && digits.length <= 15;
+  }, "Enter a valid phone number"),
   guests: z.array(z.string().email("Please enter a valid email address")),
 });
 
@@ -69,6 +74,7 @@ const MeetingForm = ({
     defaultValues: {
       fullName: "",
       email: "",
+      phone: "",
       guests: [],
     },
   });
@@ -116,6 +122,7 @@ const MeetingForm = ({
       end_time: selectedSlot.end_time,
       user_name: data.fullName,
       user_email: data.email,
+      user_phone: data.phone,
       other_participants: data.guests.join(", "),
     };
 
@@ -143,7 +150,7 @@ const MeetingForm = ({
   return (
     <motion.div
       key={2}
-      className={`w-full md:h-[31rem] lg:w-[41rem] shrink-0 md:p-6 md:px-4`}
+      className={`w-full md:h-[38rem] lg:w-[41rem] shrink-0 md:p-6 md:px-4`}
       initial={isMobileView ? {} : { x: "100%" }}
       animate={{ x: 0 }}
       exit={isMobileView ? {} : { x: "100%" }}
@@ -227,6 +234,41 @@ const MeetingForm = ({
                   <FormMessage
                     className={`${
                       form.formState.errors.email ? "text-red-500" : ""
+                    }`}
+                  />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel
+                    className={`${
+                      form.formState.errors.phone ? "text-red-500" : ""
+                    }`}
+                  >
+                    Phone
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      disabled={loading}
+                      type="tel"
+                      autoComplete="tel"
+                      className={`active:ring-blue-400 focus-visible:ring-blue-400 ${
+                        form.formState.errors.phone
+                          ? "active:ring-red-500 focus-visible:ring-red-500"
+                          : ""
+                      }`}
+                      placeholder="+971 50 123 4567"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage
+                    className={`${
+                      form.formState.errors.phone ? "text-red-500" : ""
                     }`}
                   />
                 </FormItem>

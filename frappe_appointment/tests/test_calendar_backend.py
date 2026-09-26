@@ -40,5 +40,50 @@ class TestCaldavTime(unittest.TestCase):
         self.assertEqual(format_system_time_as_utc("2026-09-28 15:00:00", "Asia/Dubai"), "20260928T110000Z")
 
 
+_phone_spec = importlib.util.spec_from_file_location(
+    "booking_contact",
+    Path(__file__).resolve().parents[1] / "helpers" / "booking_contact.py",
+)
+_phone = importlib.util.module_from_spec(_phone_spec)
+_phone_spec.loader.exec_module(_phone)
+
+
+class TestBookingPhone(unittest.TestCase):
+    def test_blank_phone_is_omitted(self):
+        self.assertEqual(_phone.normalize_booking_phone("  "), "")
+        self.assertEqual(_phone.description_with_phone("Meet link", ""), "Meet link")
+
+    def test_uae_number_is_stored_on_the_description(self):
+        phone = _phone.normalize_booking_phone("+971 50 123 4567")
+        self.assertEqual(phone, "+971 50 123 4567")
+        self.assertEqual(_phone.description_with_phone("", phone), "Phone: +971 50 123 4567")
+
+    def test_short_or_text_phone_is_rejected(self):
+        with self.assertRaises(ValueError):
+            _phone.normalize_booking_phone("123")
+        with self.assertRaises(ValueError):
+            _phone.normalize_booking_phone("call me")
+
+
+_slot_spec = importlib.util.spec_from_file_location(
+    "slot_blocks",
+    Path(__file__).resolve().parents[1] / "helpers" / "slot_blocks.py",
+)
+_slots = importlib.util.module_from_spec(_slot_spec)
+_slot_spec.loader.exec_module(_slots)
+
+
+class TestBookedSlot(unittest.TestCase):
+    def test_booked_meeting_is_added_and_sorted_before_later_busy_time(self):
+        calendar = [{"starts_on": "2026-09-29 15:00:00", "ends_on": "2026-09-29 15:15:00"}]
+        booked = [{"starts_on": "2026-09-29 14:00:00", "ends_on": "2026-09-29 14:15:00"}]
+        merged = _slots.with_booked_intervals(calendar, booked)
+        self.assertEqual(merged[0]["starts_on"], "2026-09-29 14:00:00")
+        self.assertEqual(merged[1]["starts_on"], "2026-09-29 15:00:00")
+
+    def test_empty_or_reversed_booking_is_ignored(self):
+        self.assertEqual(_slots.with_booked_intervals([], [{"starts_on": "b", "ends_on": "a"}]), [])
+
+
 if __name__ == "__main__":
     unittest.main()

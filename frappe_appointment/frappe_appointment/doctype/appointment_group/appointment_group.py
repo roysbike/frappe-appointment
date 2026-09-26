@@ -21,7 +21,9 @@ from frappe_appointment.frappe_appointment.doctype.appointment_time_slot.appoint
     GoogleBadRequest,
     get_all_unavailable_google_calendar_slots_for_day,
 )
+from frappe_appointment.helpers.slot_blocks import with_booked_intervals
 from frappe_appointment.helpers.utils import (
+    convert_datetime_to_utc,
     convert_timezone_to_utc,
     get_utc_datatime_with_time,
     get_weekday,
@@ -434,15 +436,21 @@ def get_booking_frequency_reached(datetime: datetime, appointment_group: object)
     start_datetime, end_datetime = get_datetime_str(datetime), get_datetime_str(add_days(datetime, 1))
 
     if appointment_group.get("is_personal_meeting", False):
+        # One booking owns that time. A second guest must not get the same slot,
+        # even when the calendar does not report free/busy.
+        filters = [
+            ["starts_on", "<", end_datetime],
+            ["ends_on", ">", start_datetime],
+            ["status", "!=", "Cancelled"],
+        ]
+        calendar_name = appointment_group.get("linked_doctype")
+        if calendar_name:
+            filters.append(["custom_user_calendar", "=", calendar_name])
+        else:
+            filters.append(["custom_appointment_slot_duration", "=", appointment_group.duration_id])
         all_events = frappe.get_list(
             "Event",
-            filters=[
-                ["custom_appointment_slot_duration", "=", appointment_group.duration_id],
-                ["starts_on", ">=", start_datetime],
-                ["starts_on", "<", end_datetime],
-                ["ends_on", ">=", start_datetime],
-                ["ends_on", "<", end_datetime],
-            ],
+            filters=filters,
             fields=["starts_on", "ends_on", "google_calendar_event_id"],
             order_by="starts_on asc",
             ignore_permissions=True,
@@ -547,7 +555,23 @@ def update_cal_slots_with_events(all_slots: list, all_events: list) -> list:
 
         update_slots.append(updated_slot)
 
-    return update_slots
+    booked = []
+    for event in all_events or []:
+        start = _as_utc(event.get("starts_on"))
+        end = _as_utc(event.get("ends_on"))
+        if start and end:
+            booked.append({"starts_on": start, "ends_on": end})
+
+    return with_booked_intervals(update_slots, booked)
+
+
+def _as_utc(value):
+    if not value:
+        return None
+    moment = value if isinstance(value, datetime.datetime) else get_datetime(value)
+    if moment.tzinfo is None:
+        return convert_datetime_to_utc(moment)
+    return moment.astimezone(datetime.timezone.utc)
 
 
 def get_avaiable_time_slot_for_day(

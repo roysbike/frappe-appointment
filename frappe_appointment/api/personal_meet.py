@@ -7,6 +7,7 @@ import pytz
 from frappe.rate_limiter import rate_limit
 
 from frappe_appointment.frappe_appointment.doctype.appointment_group.appointment_group import _get_time_slots_for_day
+from frappe_appointment.helpers.booking_contact import description_with_phone, normalize_booking_phone
 from frappe_appointment.helpers.overrides import add_response_code
 from frappe_appointment.helpers.utils import duration_to_string
 from frappe_appointment.overrides.event_override import _create_event_for_appointment_group
@@ -168,6 +169,7 @@ def book_time_slot(
     user_name: str,
     user_email: str,
     other_participants: str = None,
+    user_phone: str = None,
     **args,
 ):
     duration = frappe.get_doc("Appointment Slot Duration", duration_id)
@@ -184,6 +186,14 @@ def book_time_slot(
         return {"error": "No user found"}, 404
 
     user_availability = user_availability[0]
+
+    try:
+        user_phone = normalize_booking_phone(user_phone)
+    except ValueError:
+        frappe.throw(frappe._("Enter a valid phone number"))
+    if user_phone:
+        args["user_phone"] = user_phone
+        args["description"] = description_with_phone(args.get("description"), user_phone)
 
     appointment_group_obj = create_dummy_appointment_group(duration, user_availability)
 

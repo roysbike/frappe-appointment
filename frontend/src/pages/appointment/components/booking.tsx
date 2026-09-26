@@ -310,7 +310,7 @@ const Booking = ({ type, banner }: BookingProp) => {
                   </Typography>
                 </div>
               </div>
-              <div className="max-lg:w-full shrink-0 lg:max-h-[31rem] md:overflow-hidden">
+              <div className="max-lg:w-full shrink-0 lg:max-h-[38rem] md:overflow-hidden">
                 {/* Calendar and Availability slots */}
                 <AnimatePresence mode="wait">
                   {!state.showMeetingForm && (
