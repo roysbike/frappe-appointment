@@ -38,9 +38,16 @@ class UserAppointmentAvailability(Document):
                         )
                     )
                 weekdays.append(slot.day)
-        calendar = frappe.get_doc("Google Calendar", self.google_calendar)
-        if not calendar.custom_is_google_calendar_authorized:
-            frappe.throw(frappe._("Please authorize Google Calendar before creating appointment availability."))
+        calendar = None
+        if (self.calendar_source or "Google Calendar") == "Namecheap CalDAV":
+            if not self.caldav_username or not self.get_password("caldav_app_password"):
+                frappe.throw(frappe._("Set the Namecheap mailbox and application password."))
+            if not self.caldav_server:
+                self.caldav_server = "https://dav.privateemail.com"
+        else:
+            calendar = frappe.get_doc("Google Calendar", self.google_calendar)
+            if not calendar.custom_is_google_calendar_authorized:
+                frappe.throw(frappe._("Please authorize Google Calendar before creating appointment availability."))
         if self.enable_scheduling and not self.slug:
             frappe.throw(frappe._("Please set a slug before enabling scheduling."))
         if self.slug:
@@ -69,7 +76,7 @@ class UserAppointmentAvailability(Document):
                 return frappe.throw(
                     frappe._(f"Please set Zoom Account ID, Client ID and Secret in {appointment_settings_link}.")
                 )
-            if not calendar.custom_zoom_user_email:
+            if calendar and not calendar.custom_zoom_user_email:
                 google_calendar_link = frappe.utils.get_link_to_form(
                     "Google Calendar", calendar.name, "Google Calendar"
                 )

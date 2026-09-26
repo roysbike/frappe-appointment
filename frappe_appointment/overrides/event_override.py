@@ -541,7 +541,16 @@ def _create_event_for_appointment_group(
     if len(members) <= 0:
         return frappe.throw(frappe._("No Member found"))
 
-    _, account = get_google_calendar_object(appointment_group.event_creator)
+    availability_name = event_info.get("user_calendar")
+    use_caldav = False
+    if availability_name:
+        use_caldav = (
+            frappe.db.get_value("User Appointment Availability", availability_name, "calendar_source")
+            == "Namecheap CalDAV"
+        )
+    account = None
+    if not use_caldav:
+        _, account = get_google_calendar_object(appointment_group.event_creator)
 
     if reschedule:
         if not appointment_group.allow_rescheduling:
@@ -584,6 +593,17 @@ def _create_event_for_appointment_group(
                 return frappe.throw(webhook_call["message"])
 
             event.save(ignore_permissions=True)
+            if use_caldav:
+                from frappe_appointment.integrations.namecheap_caldav import create_event
+
+                create_event(
+                    availability_name,
+                    event.name,
+                    event.subject,
+                    starts_on,
+                    ends_on,
+                    event.description or "",
+                )
 
             # clear all previous logs
             clear_messages()
@@ -613,9 +633,9 @@ def _create_event_for_appointment_group(
         "description": event_info.get("description"),
         "starts_on": starts_on,
         "ends_on": ends_on,
-        "sync_with_google_calendar": 1,
-        "google_calendar": account.name,
-        "google_calendar_id": account.google_calendar_id,
+        "sync_with_google_calendar": 0 if use_caldav else 1,
+        "google_calendar": None if use_caldav else account.name,
+        "google_calendar_id": None if use_caldav else account.google_calendar_id,
         "pulled_from_google_calendar": 0,
         "custom_sync_participants_google_calendars": 1,
         "event_participants": json.loads(event_participants),
@@ -648,6 +668,17 @@ def _create_event_for_appointment_group(
         return frappe.throw(webhook_call["message"])
 
     event.insert(ignore_permissions=True)
+    if use_caldav:
+        from frappe_appointment.integrations.namecheap_caldav import create_event
+
+        create_event(
+            availability_name,
+            event.name,
+            event.subject,
+            starts_on,
+            ends_on,
+            event.description or "",
+        )
 
     # nosemgrep
     frappe.db.commit()

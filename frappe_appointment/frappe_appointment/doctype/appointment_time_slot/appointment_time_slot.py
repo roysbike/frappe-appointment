@@ -82,6 +82,12 @@ def get_google_calendar_slots_member(
     if not member:
         return None
 
+    calendar_source = frappe.db.get_value("User Appointment Availability", member, "calendar_source") or "Google Calendar"
+    if calendar_source == "Namecheap CalDAV":
+        from frappe_appointment.integrations.namecheap_caldav import busy_events
+
+        return busy_events(member, date)
+
     google_calendar_id = frappe.get_value("User Appointment Availability", member, "google_calendar")
 
     if not google_calendar_id:

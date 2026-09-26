@@ -10,6 +10,10 @@
  "engine": "InnoDB",
  "field_order": [
   "user",
+  "calendar_source",
+  "caldav_server",
+  "caldav_username",
+  "caldav_app_password",
   "google_calendar",
   "appointment_time_slot",
   "personal_meetings_section",
@@ -43,7 +47,8 @@
    "fieldtype": "Link",
    "label": "Google Calendar",
    "options": "Google Calendar",
-   "reqd": 1
+   "depends_on": "eval:doc.calendar_source!='Namecheap CalDAV'",
+   "mandatory_depends_on": "eval:doc.calendar_source!='Namecheap CalDAV'"
   },
   {
    "default": "0",
@@ -101,6 +106,39 @@
    "fieldtype": "Link",
    "label": "Response Email Template",
    "options": "Email Template"
+  },
+  {
+   "fieldname": "calendar_source",
+   "fieldtype": "Select",
+   "label": "Calendar",
+   "options": "Google Calendar\nNamecheap CalDAV",
+   "default": "Google Calendar",
+   "reqd": 1
+  },
+  {
+   "fieldname": "caldav_server",
+   "fieldtype": "Data",
+   "label": "CalDAV Server",
+   "default": "https://dav.privateemail.com",
+   "depends_on": "eval:doc.calendar_source=='Namecheap CalDAV'",
+   "mandatory_depends_on": "eval:doc.calendar_source=='Namecheap CalDAV'",
+   "description": "Namecheap Private Email calendar. Apple Calendar uses the same server."
+  },
+  {
+   "fieldname": "caldav_username",
+   "fieldtype": "Data",
+   "label": "Mailbox",
+   "depends_on": "eval:doc.calendar_source=='Namecheap CalDAV'",
+   "mandatory_depends_on": "eval:doc.calendar_source=='Namecheap CalDAV'",
+   "description": "Full Private Email address, for example artem@mybooks.ae"
+  },
+  {
+   "fieldname": "caldav_app_password",
+   "fieldtype": "Password",
+   "label": "Application Password",
+   "depends_on": "eval:doc.calendar_source=='Namecheap CalDAV'",
+   "mandatory_depends_on": "eval:doc.calendar_source=='Namecheap CalDAV'",
+   "description": "Namecheap Private Email application password, not the webmail password."
   }
  ],
  "index_web_pages_for_search": 1,
